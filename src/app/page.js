@@ -4,33 +4,38 @@ import { useEffect, useState } from 'react';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
 import SkeletonCard from '../components/SkeletonCard';
+import PaymentModal from '../components/PaymentModal';
 import { Wifi } from 'lucide-react';
 
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Modal State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+    // We define the function INSIDE the effect to satisfy the linter
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get('/products/');
+        setProducts(response.data);
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        setError('Failed to load bundles. Please check your connection.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
-    try {
-      // Connects to /api/products/ on your Django backend
-      const response = await api.get('/products/');
-      setProducts(response.data);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load products:', err);
-      setError('Failed to load bundles. Please check your connection.');
-      setLoading(false);
-    }
-  };
-
   const handleBuy = (product) => {
-    // We will implement Phase 3 (Checkout Logic) here next!
-    alert(`You selected: ${product.name} @ KES ${product.price}`);
+    setSelectedProduct(product);
+    setIsModalOpen(true);
   };
 
   return (
@@ -38,6 +43,7 @@ export default function Home() {
       
       {/* Hero Header */}
       <div className="text-center mb-12">
+        {/* Updated gradient class to bg-linear-to-r */}
         <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-linear-to-r from-green-400 to-blue-500 text-transparent bg-clip-text">
           Instant Data Bundles
         </h1>
@@ -52,7 +58,7 @@ export default function Home() {
           <Wifi className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>{error}</p>
           <button 
-            onClick={fetchProducts}
+            onClick={() => window.location.reload()}
             className="mt-4 text-sm underline hover:text-white"
           >
             Try Again
@@ -61,10 +67,8 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading
-            ? // Show 6 skeletons while loading
-              Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-            : // Show actual products when loaded
-              products.map((product) => (
+            ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+            : products.map((product) => (
                 <ProductCard 
                   key={product.id} 
                   product={product} 
@@ -73,6 +77,14 @@ export default function Home() {
               ))}
         </div>
       )}
+
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        product={selectedProduct} 
+      />
+      
     </div>
   );
 }
